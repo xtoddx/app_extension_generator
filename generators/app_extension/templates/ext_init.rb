@@ -3,21 +3,19 @@ unless defined?(ActionController) and defined?(ActionController::Dispatcher)
   require 'action_controller/dispatcher'
 end
 
-# Routing Extension
 require File.join(File.dirname(__FILE__), '<%= file_name %>_routing_extension')
-ActionController::Routing::RouteSet.send :include, <%= class_name %>RoutingExtension
+require File.join(File.dirname(__FILE__), '<%= file_name %>_dependencies')
 
-# Dependency reload mechanism
-require File.join(File.dirname(__FILE__), '<%= file_name %>_dependency_extension')
-Dependencies.extend <%= class_name %>DependencyExtension
+# Routing Extension
+ActionController::Routing::RouteSet.send :include, <%= class_name %>RoutingExtension
 
 # Load paths go after rails app's own lib/, before previously loaded plugins
 ali = $LOAD_PATH.index(File.join(RAILS_ROOT, 'lib')) || 0
 paths = [
-  File.join(File.dirname(__FILE__), '..', 'app', 'controllers'),
-  File.join(File.dirname(__FILE__), '..', 'app', 'helpers'),
-  File.join(File.dirname(__FILE__), '..', 'app', 'models'),
-  File.join(File.dirname(__FILE__), '..', 'lib')
+  File.expand_path(File.join(File.dirname(__FILE__), '..', 'app', 'controllers')),
+  File.expand_path(File.join(File.dirname(__FILE__), '..', 'app', 'helpers')),
+  File.expand_path(File.join(File.dirname(__FILE__), '..', 'app', 'models')),
+  File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib'))
 ]
 paths.each do |p|
   $LOAD_PATH.insert(ali + 1, p)
@@ -36,17 +34,15 @@ ActionController::Base.prepend_view_path File.join(File.dirname(__FILE__), '..',
 if File.directory?(File.join(File.dirname(__FILE__), '..', 'public'))
   require 'fileutils'
   ['javascripts', 'stylesheets', 'images'].each do |type|
-    r_path = File.join(RAILS_ROOT, 'public', type, '<%= file_name %>')
     p_path = File.join(File.dirname(__FILE__), '..', 'public', type)
-    unless File.directory?(r_path)
-      FileUtils.mkdir_p(r_path)
-    end
+    next if Dir[File.join(p_path, '*')].empty?
+    r_path = File.join(RAILS_ROOT, 'public', type, '<%= file_name %>')
+    FileUtils.mkdir_p(r_path) unless File.directory?(r_path)
     Dir["#{p_path}/*"].each do |asset|
+      # only copy in files that aren't there yet
       unless File.exist?(File.join(r_path, File.basename(asset)))
         FileUtils.cp_r(asset, r_path)
       end
     end
   end
 end
-
-
